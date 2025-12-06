@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>에이언즈 엔드 헬퍼 (네메시스 7종)</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        @keyframes zoomIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        .animate-zoom-in { animation: zoomIn 0.3s ease-out forwards; }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        .animate-fade-in { animation: fadeIn 0.2s ease-out forwards; }
+
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #1e293b; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #475569; border-radius: 3px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #64748b; }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-100 font-sans select-none h-screen flex overflow-hidden">
+
+    <!-- 플로팅 헤더 버튼들 (사이드바가 닫혔을 때 보임) -->
+    <div id="btn-open-left" class="absolute top-4 left-4 z-20 lg:hidden transition-opacity duration-300">
+        <button onclick="openLeftSidebar()" class="p-2 bg-slate-800 rounded-lg shadow-lg border border-slate-700 text-slate-300 hover:text-white">
+            <i data-lucide="book-open" class="w-6 h-6"></i>
+        </button>
+    </div>
+    <div id="btn-open-right" class="absolute top-4 right-4 z-20 lg:hidden transition-opacity duration-300">
+        <button onclick="openRightSidebar()" class="p-2 bg-slate-800 rounded-lg shadow-lg border border-slate-700 text-rose-400 hover:text-rose-200">
+            <i data-lucide="skull" class="w-6 h-6"></i>
+        </button>
+    </div>
+
+    <!-- 1. 좌측 사이드바 (캐릭터) -->
+    <aside id="sidebar-left" class="fixed inset-y-0 left-0 z-30 w-80 bg-slate-800/95 backdrop-blur-md border-r border-slate-700 transform -translate-x-full lg:translate-x-0 lg:relative transition-transform duration-300 flex flex-col shadow-2xl lg:shadow-none">
+        <div class="p-4 border-b border-slate-700 flex justify-between items-center bg-slate-900/50">
+            <h2 class="text-lg font-bold text-amber-500 flex items-center gap-2">
+                <i data-lucide="users" class="w-5 h-5"></i> 균열 마법사
+            </h2>
+            <button onclick="closeLeftSidebar()" class="text-slate-400 hover:text-white">
+                <i data-lucide="x" class="w-6 h-6"></i>
+            </button>
+        </div>
+
+        <div class="p-4 pb-2">
+            <div class="relative">
+                <i data-lucide="search" class="absolute left-3 top-2.5 w-4 h-4 text-slate-500"></i>
+                <input type="text" id="char-search" placeholder="이름 검색..." onkeyup="filterCharacters()" 
+                    class="w-full bg-slate-900 border border-slate-700 rounded-lg py-2 pl-9 pr-4 text-sm text-slate-200 focus:outline-none focus:border-amber-500 placeholder-slate-600">
+            </div>
+            <div class="mt-2 text-xs text-slate-500 text-center">
+                [P1], [P2] 버튼으로 플레이어를 지정하세요.
+            </div>
+        </div>
+
+        <div id="character-list" class="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
+            <!-- 캐릭터 리스트 생성됨 -->
+        </div>
+    </aside>
+
+    <!-- 2. 메인 게임 영역 -->
+    <main class="flex-1 flex flex-col items-center justify-center p-4 relative w-full overflow-y-auto min-w-0 transition-all duration-300">
+        <div class="w-full max-w-xl flex justify-between items-center mb-6 px-2 mt-12 lg:mt-0">
+            <div id="round-display" class="text-xl font-bold bg-slate-800 px-4 py-2 rounded-lg shadow-lg border border-slate-700">
+                Round 1
+            </div>
+            <button onclick="resetGame()" class="p-2 text-slate-400 hover:text-white transition-colors" title="게임 리셋">
+                <i data-lucide="refresh-cw" class="w-5 h-5"></i>
+            </button>
+        </div>
+
+        <div class="relative w-full max-w-xl h-[560px] mb-6 group perspective-1000">
+            <!-- 뒷면 -->
+            <div id="card-back" class="absolute inset-0 w-full h-full bg-slate-800 rounded-3xl shadow-2xl border-4 border-slate-700 flex flex-col items-center justify-center cursor-pointer hover:scale-[1.02] transition-transform duration-200" onclick="handleMainAction()">
+                <div class="text-6xl mb-4 opacity-50">🃏</div>
+                <p class="text-xl font-bold text-slate-400">터치하여 카드 뽑기</p>
+                <p id="deck-count" class="text-sm text-slate-500 mt-2">6장 남음</p>
+            </div>
+            <!-- 셔플 중 -->
+            <div id="shuffling-view" class="hidden absolute inset-0 w-full h-full bg-slate-800 rounded-3xl shadow-2xl border-4 border-slate-700 flex flex-col items-center justify-center animate-pulse">
+                <i data-lucide="shuffle" class="w-16 h-16 animate-spin mb-4 text-purple-400"></i>
+                <p class="text-xl font-bold text-purple-400">셔플 중...</p>
+            </div>
+            <!-- 앞면 -->
+            <div id="card-front" onclick="handleMainAction()" class="hidden absolute inset-0 w-full h-full rounded-3xl shadow-[0_0_30px_rgba(0,0,0,0.5)] border-4 border-white/10 flex flex-col items-center justify-center transition-all duration-300 animate-zoom-in cursor-pointer hover:scale-[1.02] group-card">
+                <button onclick="event.stopPropagation(); openReturnModal(-1);" class="absolute top-4 right-4 p-2 bg-black/30 hover:bg-black/50 rounded-full text-white/70 hover:text-white transition-colors z-10" title="이 카드를 덱으로 되돌리기">
+                    <i data-lucide="undo-2" class="w-6 h-6"></i>
+                </button>
+                <div class="w-full flex-1 flex flex-col items-center p-4 text-center pointer-events-none overflow-hidden">
+                    <!-- 상단 영역: 아이콘 + 이름 (고정 높이) -->
+                    <div class="flex flex-col items-center justify-center min-h-[160px]">
+                        <div id="card-icon-container" class="flex-shrink-0 flex items-center justify-center mb-3 backdrop-blur-sm shadow-inner text-white"></div>
+                        <h2 id="card-name" class="text-3xl font-extrabold drop-shadow-md mb-1"></h2>
+                        <p id="card-sub-name" class="text-lg font-bold text-white/80 mb-1 hidden"></p>
+                        <p id="card-turn-label" class="text-white/60 font-medium text-sm">Turn Order</p>
+                    </div>
+                    <!-- 하단 영역: 스킬 정보 (나머지 공간) -->
+                    <div id="card-skill-container" class="hidden w-full flex-1 px-2 mt-2 overflow-hidden">
+                        <div class="bg-black/30 backdrop-blur-sm rounded-xl p-3 border border-white/10 h-full flex flex-col">
+                            <p id="card-skill-condition" class="text-amber-400 font-bold text-sm mb-2 py-1 px-2 bg-amber-500/20 rounded-lg inline-block flex-shrink-0"></p>
+                            <p id="card-skill-name" class="text-white font-bold text-sm mb-1 flex-shrink-0"></p>
+                            <p id="card-skill-desc" class="text-white/70 text-xs leading-relaxed flex-1 overflow-y-auto custom-scrollbar"></p>
+                        </div>
+                    </div>
+                </div>
+                <div class="w-full py-3 bg-black/20 backdrop-blur-md rounded-b-2xl flex justify-center items-center gap-2 pointer-events-none">
+                    <span id="card-footer-info" class="text-sm font-medium text-white/50"></span>
+                </div>
+            </div>
+        </div>
+
+        <button id="action-btn" onclick="handleMainAction()" class="w-full max-w-xl py-4 rounded-xl text-xl font-bold shadow-lg transition-all transform active:scale-95 mb-8 bg-slate-700 hover:bg-slate-600 text-white shadow-slate-900/50 flex items-center justify-center gap-2">
+            다음 턴 카드 뽑기
+        </button>
+
+        <div class="w-full max-w-xl bg-slate-800/50 rounded-xl p-4 border border-slate-700 backdrop-blur-sm">
+            <div class="flex items-center justify-between mb-3 text-slate-400">
+                <div class="flex items-center gap-2">
+                    <i data-lucide="history" class="w-4 h-4"></i>
+                    <span class="text-sm font-semibold">이번 라운드 기록</span>
+                </div>
+                <span class="text-xs opacity-60">클릭하여 덱 반환</span>
+            </div>
+            <div id="history-container" class="flex gap-2 overflow-x-auto pb-2 scrollbar-hide justify-center"></div>
+        </div>
+    </main>
+
+    <!-- 3. 우측 사이드바 (네메시스) -->
+    <aside id="sidebar-right" class="fixed inset-y-0 right-0 z-30 w-80 bg-slate-800/95 backdrop-blur-md border-l border-slate-700 transform translate-x-full lg:translate-x-0 lg:relative transition-transform duration-300 flex flex-col shadow-2xl lg:shadow-none">
+        <div class="p-4 border-b border-slate-700 flex justify-between items-center bg-slate-900/50">
+            <h2 class="text-lg font-bold text-rose-500 flex items-center gap-2">
+                <i data-lucide="skull" class="w-5 h-5"></i> 네메시스 선택
+            </h2>
+            <button onclick="closeRightSidebar()" class="text-slate-400 hover:text-white">
+                <i data-lucide="x" class="w-6 h-6"></i>
+            </button>
+        </div>
+
+        <div class="p-4 text-xs text-slate-500 text-center">
+            이번 게임의 네메시스를 선택하세요.
+        </div>
+
+        <div id="nemesis-list" class="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
+            <!-- 네메시스 리스트 생성됨 -->
+        </div>
+    </aside>
+
+    <div id="sidebar-overlay" onclick="closeSidebars()" class="fixed inset-0 bg-black/50 z-20 hidden lg:hidden backdrop-blur-sm transition-opacity"></div>
+
+
+    <!-- 덱 반환 모달 -->
+    <div id="return-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm animate-fade-in p-4">
+        <div class="bg-slate-800 border border-slate-600 rounded-2xl p-6 w-full max-w-sm shadow-2xl">
+            <div class="flex items-center gap-3 mb-4 text-amber-400">
+                <i data-lucide="rotate-ccw" class="w-6 h-6"></i>
+                <h3 class="text-xl font-bold text-white">카드 반환</h3>
+            </div>
+            <p class="text-slate-300 mb-6 leading-relaxed">
+                <span id="modal-card-name" class="font-bold text-white"></span> 카드를<br/>
+                덱으로 되돌리고 섞으시겠습니까?
+            </p>
+            <div class="flex gap-3">
+                <button onclick="closeReturnModal()" class="flex-1 py-3 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-xl font-semibold">취소</button>
+                <button onclick="confirmReturn()" class="flex-1 py-3 bg-amber-600 hover:bg-amber-500 text-white rounded-xl font-bold shadow-lg">확인</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- 1. 데이터 ---
+        const CHARACTERS = [
+            { name: "아델하임", charge: 5, skill: "에테르 방벽", desc: "네메시스 뽑기 단계 동안 활성화: 네메시스 공격 카드 또는 위력 카드가 뽑혔을 때, 당신은 원한다면 카드 효과를 수행하기 전에 해당 카드를 버립니다. 해당 카드는 아무런 효과도 없이 버려집니다. (네메시스는 버려진 카드를 대체할 다른 카드를 뽑지 않습니다.)" },
+            { name: "브라마", charge: 6, skill: "긴급 흡인", desc: "당신의 행동 단계 동안 활성화: 아무 플레이어 1명은 생명력을 4 얻습니다." },
+            { name: "말라스타르", charge: 6, skill: "에테르의 선물", desc: "당신의 행동 단계 동안 활성화: 아무 공급 더미 1곳에서 주문 1장을 얻습니다. 당신은 원한다면 해당 주문을 아무 플레이어 1명의 개방된 균열에 준비합니다." },
+            { name: "페드락사", charge: 5, skill: "점쟁이 룬", desc: "차례 순서 카드를 뽑은 직후 활성화: 해당 차례 동안 플레이어들 및 그레이브홀드가 받을 피해를 모두 방지합니다." },
+            { name: "즈하나", charge: 5, skill: "성소의 상형문자", desc: "당신의 행동 단계 동안 활성화: 그레이브홀드는 생명력을 7 얻습니다." },
+            { name: "라쉬", charge: 5, skill: "빠른 두뇌 회전", desc: "아무 플레이어 1명의 행동 단계 동안 활성화: 아무 플레이어 1명의 차례 순서 카드 1장을 차례 순서 덱에 넣고 섞습니다. 해당 플레이어는 피해를 1 받습니다. (공용 차례 순서 카드는 선택할 수 없습니다.)" },
+            { name: "레에베", charge: 4, skill: "제압하는 칼날", desc: "당신의 행동 단계 동안 활성화: 하수인 하나에게 피해를 5 입힙니다. 다른 하수인 하나에게 피해를 3 입힙니다." },
+            { name: "님", charge: 5, skill: "종단의 장막", desc: "당신의 행동 단계 동안 활성화: 네메시스 덱 맨 위 카드를 버립니다. 버린 카드가 공격 카드일 경우, 1장을 추가로 버립니다." },
+            { name: "크삭소스", charge: 5, skill: "형이상학적 연결", desc: "아무 플레이어 1명의 행동 단계 동안 활성화: 동료 전체가 통틀어 충전을 4개를 얻습니다. 차례 순서 덱을 전부 공개하고, 공개된 카드들을 원하는 순서대로 덱으로 되돌립니다." },
+            { name: "미스트", charge: 5, skill: "성스러운 점치기", desc: "당신의 행동 단계 동안 활성화: 아무 동료 1명은 카드 4장을 뽑습니다." },
+            { name: "카디르", charge: 5, skill: "이계의 차원문", desc: "아무 플레이어 1명의 행동 단계 동안 활성화: 해당 플레이어는 원한다면 자신의 버림 더미에 있는 주문을 3장까지 자신의 손으로 되돌립니다. 해당 플레이어는 원한다면 이번 차례에 자신의 개방된 균열마다 주문을 2장까지 준비합니다." },
+            { name: "지안", charge: 4, skill: "검은 거울", desc: "당신의 행동 단계 동안 활성화: 아무 플레이어 1명의 준비된 주문 1장을 버리지 않고 발동합니다. 그런 다음 그 준비된 주문을 다시 발동합니다. (두 번째 발동 후에는 버립니다.)" }
+        ];
+
+        // 이미지 파일명과 일치하도록 한글 이름 설정 (괄호 안 영문은 UI 표시용)
+        const NEMESES = [
+            { name: "분노의 전령", enName: "Rageborne", imgFile: "분노의정령" },
+            { name: "갑각 여왕", enName: "Carapace Queen", imgFile: "갑각여왕" },
+            { name: "폭식 왕자", enName: "Prince of Gluttony", imgFile: "폭식왕자" },
+            { name: "뒤틀린 가면", enName: "Crooked Mask", imgFile: "뒤틀린가면" },
+            { name: "황폐의 군주", enName: "Decimus", imgFile: "황폐의군주" },
+            { name: "부족 마녀", enName: "Horde-Crone", imgFile: "부족마녀" },
+            { name: "불가해한 존재", enName: "The Wayward One", imgFile: "불가해한존재" }
+        ];
+
+        // 상태
+        let assignedP1 = null; 
+        let assignedP2 = null;
+        let assignedNemesis = null;
+
+        // --- 2. 렌더링 로직 (사이드바) ---
+        
+        function formatDescription(desc) {
+            const regex = /^(.*?)(활성화\s*:)(.*)$/s;
+            const match = desc.match(regex);
+            if (match) {
+                return `<span class="block text-amber-400 font-bold text-sm mb-1 mt-2">${match[1]}${match[2]}</span><span class="text-slate-300">${match[3]}</span>`;
+            }
+            return desc;
+        }
+
+        function toggleAssign(charName, player) {
+            const char = CHARACTERS.find(c => c.name === charName);
+            if (!char) return;
+
+            if (player === 'P1') {
+                assignedP1 = (assignedP1 === char) ? null : char;
+                if (assignedP2 === char) assignedP2 = null;
+            } else if (player === 'P2') {
+                assignedP2 = (assignedP2 === char) ? null : char;
+                if (assignedP1 === char) assignedP1 = null;
+            }
+            renderLeftSidebar(document.getElementById('char-search').value);
+            render(); 
+        }
+
+        function toggleNemesisAssign(nemesisName) {
+            const nem = NEMESES.find(n => n.name === nemesisName);
+            if (!nem) return;
+
+            if (assignedNemesis === nem) {
+                assignedNemesis = null;
+            } else {
+                assignedNemesis = nem;
+            }
+            renderRightSidebar();
+            render();
+        }
+
+        function renderLeftSidebar(filterText = "") {
+            const list = document.getElementById('character-list');
+            list.innerHTML = "";
+            const filtered = CHARACTERS.filter(c => c.name.includes(filterText));
+
+            if (filtered.length === 0) {
+                list.innerHTML = `<div class="text-slate-500 text-center py-4 text-sm">검색 결과가 없습니다.</div>`;
+                return;
+            }
+
+            filtered.forEach(char => {
+                const isP1 = assignedP1 === char;
+                const isP2 = assignedP2 === char;
+
+                const item = document.createElement('div');
+                let borderClass = "border-slate-700";
+                if (isP1) borderClass = "border-blue-500 ring-1 ring-blue-500 bg-slate-800";
+                else if (isP2) borderClass = "border-emerald-500 ring-1 ring-emerald-500 bg-slate-800";
+                else borderClass = "hover:border-slate-500 bg-slate-900";
+
+                item.className = `group border rounded-lg p-3 transition-all shadow-sm relative overflow-hidden ${borderClass}`;
+                
+                const formattedDesc = formatDescription(char.desc);
+                const imgPath = `char/${char.name}.png`;
+
+                item.innerHTML = `
+                    <div class="flex items-start gap-4 mb-2">
+                        <div class="w-14 h-14 rounded-full bg-slate-800 overflow-hidden flex-shrink-0 border border-slate-600 shadow-md">
+                            <img src="${imgPath}" alt="${char.name}" class="w-full h-full object-cover" 
+                                onerror="this.style.display='none'; this.nextElementSibling.classList.remove('hidden');">
+                            <div class="hidden w-full h-full flex items-center justify-center text-slate-500">
+                                <i data-lucide="user" class="w-8 h-8 opacity-50"></i>
+                            </div>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex justify-between items-start">
+                                <div class="flex flex-col">
+                                    <span class="font-bold text-slate-200 text-lg flex items-center gap-2 truncate">
+                                        ${char.name}
+                                        ${isP1 ? '<span class="text-[10px] bg-blue-600 text-white px-1.5 py-0.5 rounded flex-shrink-0">P1</span>' : ''}
+                                        ${isP2 ? '<span class="text-[10px] bg-emerald-600 text-white px-1.5 py-0.5 rounded flex-shrink-0">P2</span>' : ''}
+                                    </span>
+                                    <span class="text-sm font-semibold text-emerald-400 mt-0.5">${char.skill}</span>
+                                </div>
+                                <span class="text-xs font-bold px-2 py-1 rounded bg-amber-900/30 text-amber-400 border border-amber-900/50 whitespace-nowrap ml-2">
+                                    충전 ${char.charge}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="text-xs text-slate-400 leading-relaxed keep-all border-t border-slate-700/50 pt-2">
+                        ${formattedDesc}
+                    </div>
+                    <div class="flex gap-2 mt-3 pt-2 border-t border-slate-700/50">
+                        <button onclick="toggleAssign('${char.name}', 'P1')" 
+                            class="flex-1 py-1.5 text-xs font-bold rounded transition-colors ${isP1 ? 'bg-blue-600 text-white hover:bg-blue-500' : 'bg-slate-700 text-slate-300 hover:bg-slate-600 hover:text-white'}">
+                            ${isP1 ? 'P1 선택됨' : 'P1 지정'}
+                        </button>
+                        <button onclick="toggleAssign('${char.name}', 'P2')" 
+                            class="flex-1 py-1.5 text-xs font-bold rounded transition-colors ${isP2 ? 'bg-emerald-600 text-white hover:bg-emerald-500' : 'bg-slate-700 text-slate-300 hover:bg-slate-600 hover:text-white'}">
+                            ${isP2 ? 'P2 선택됨' : 'P2 지정'}
+                        </button>
+                    </div>
+                `;
+                list.appendChild(item);
+            });
+            lucide.createIcons();
+        }
+
+        function renderRightSidebar() {
+            const list = document.getElementById('nemesis-list');
+            list.innerHTML = "";
+
+            NEMESES.forEach(nem => {
+                const isSelected = assignedNemesis === nem;
+                const item = document.createElement('div');
+                const borderClass = isSelected 
+                    ? "border-rose-600 ring-1 ring-rose-600 bg-slate-800" 
+                    : "border-slate-700 hover:border-slate-500 bg-slate-900";
+
+                item.className = `group border rounded-lg p-3 transition-all shadow-sm cursor-pointer ${borderClass}`;
+                item.onclick = () => toggleNemesisAssign(nem.name);
+                const imgPath = `nemesis/${nem.imgFile}.png`;
+
+                item.innerHTML = `
+                    <div class="flex items-center gap-4">
+                        <div class="w-16 h-16 rounded-md bg-slate-800 overflow-hidden flex-shrink-0 border border-slate-600 shadow-md">
+                            <img src="${imgPath}" alt="${nem.name}" class="w-full h-full object-cover" 
+                                onerror="this.style.display='none'; this.nextElementSibling.classList.remove('hidden');">
+                            <div class="hidden w-full h-full flex items-center justify-center text-slate-500">
+                                <i data-lucide="skull" class="w-8 h-8 opacity-50"></i>
+                            </div>
+                        </div>
+                        <div class="flex-1">
+                            <h3 class="font-bold text-slate-200 text-sm group-hover:text-rose-400 transition-colors">${nem.name}</h3>
+                            <p class="text-xs text-slate-500 mt-1">${nem.enName}</p>
+                        </div>
+                        ${isSelected ? '<div class="text-rose-500"><i data-lucide="check-circle-2" class="w-6 h-6"></i></div>' : ''}
+                    </div>
+                `;
+                list.appendChild(item);
+            });
+            lucide.createIcons();
+        }
+
+        function filterCharacters() {
+            const text = document.getElementById('char-search').value;
+            renderLeftSidebar(text);
+        }
+
+        // --- 사이드바 토글 로직 ---
+        
+        function openLeftSidebar() {
+            const left = document.getElementById('sidebar-left');
+            const btn = document.getElementById('btn-open-left');
+            const overlay = document.getElementById('sidebar-overlay');
+            
+            left.classList.remove('-translate-x-full');
+            left.classList.add('lg:translate-x-0', 'lg:relative');
+            btn.classList.add('lg:hidden');
+
+            if (window.innerWidth < 1024) {
+                overlay.classList.remove('hidden');
+            }
+        }
+
+        function closeLeftSidebar() {
+            const left = document.getElementById('sidebar-left');
+            const btn = document.getElementById('btn-open-left');
+            const overlay = document.getElementById('sidebar-overlay');
+
+            left.classList.add('-translate-x-full');
+            left.classList.remove('lg:translate-x-0', 'lg:relative');
+            btn.classList.remove('lg:hidden');
+            
+            overlay.classList.add('hidden');
+        }
+
+        function openRightSidebar() {
+            const right = document.getElementById('sidebar-right');
+            const btn = document.getElementById('btn-open-right');
+            const overlay = document.getElementById('sidebar-overlay');
+
+            right.classList.remove('translate-x-full');
+            right.classList.add('lg:translate-x-0', 'lg:relative');
+            btn.classList.add('lg:hidden');
+            
+            if (window.innerWidth < 1024) {
+                overlay.classList.remove('hidden');
+            }
+        }
+
+        function closeRightSidebar() {
+            const right = document.getElementById('sidebar-right');
+            const btn = document.getElementById('btn-open-right');
+            const overlay = document.getElementById('sidebar-overlay');
+
+            right.classList.add('translate-x-full');
+            right.classList.remove('lg:translate-x-0', 'lg:relative');
+            btn.classList.remove('lg:hidden');
+            
+            overlay.classList.add('hidden');
+        }
+
+        function closeSidebars() {
+            if (window.innerWidth < 1024) {
+                const left = document.getElementById('sidebar-left');
+                const right = document.getElementById('sidebar-right');
+                
+                left.classList.add('-translate-x-full');
+                right.classList.add('translate-x-full');
+                document.getElementById('sidebar-overlay').classList.add('hidden');
+            }
+        }
+
+        // --- 3. 턴오더 게임 로직 ---
+        const CARD_TYPES = {
+            'P1': { id: 'P1', name: '플레이어 1', colorClass: 'bg-blue-600', subColorClass: 'bg-blue-800', textColorClass: 'text-blue-100', icon: 'user' },
+            'P2': { id: 'P2', name: '플레이어 2', colorClass: 'bg-emerald-600', subColorClass: 'bg-emerald-800', textColorClass: 'text-emerald-100', icon: 'user' },
+            'N':  { id: 'N',  name: '네메시스',   colorClass: 'bg-rose-900',  subColorClass: 'bg-rose-950',  textColorClass: 'text-rose-100',  icon: 'skull' },
+        };
+
+        let deck = [];
+        let drawnCard = null;
+        let roundHistory = [];
+        let round = 1;
+        let isShuffling = false;
+        let targetReturnIndex = null; 
+
+        function generateDeck() { return ['P1', 'P1', 'P2', 'P2', 'N', 'N']; }
+        function shuffleArray(arr) {
+            for (let i = arr.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+            }
+            return arr;
+        }
+
+        function initGame() {
+            deck = shuffleArray(generateDeck());
+            drawnCard = null;
+            roundHistory = [];
+            round = 1;
+            render();
+        }
+
+        function startNewRound() {
+            isShuffling = true;
+            render();
+            setTimeout(() => {
+                deck = shuffleArray(generateDeck());
+                drawnCard = null;
+                roundHistory = [];
+                if (round > 0) round++;
+                isShuffling = false;
+                render();
+            }, 800);
+        }
+
+        function handleMainAction() {
+            if (isShuffling) return;
+            if (!document.getElementById('return-modal').classList.contains('hidden')) return;
+
+            if (deck.length === 0 && drawnCard) {
+                startNewRound();
+                return;
+            }
+
+            if (deck.length > 0) {
+                const cardId = deck.pop();
+                drawnCard = CARD_TYPES[cardId];
+                roundHistory.push(drawnCard);
+                render();
+            } else {
+                startNewRound();
+            }
+        }
+
+        function resetGame() {
+            if (confirm('게임을 초기화 하시겠습니까?')) initGame();
+        }
+
+        function openReturnModal(index) {
+            if (index === -1) {
+                if (roundHistory.length === 0) return;
+                index = roundHistory.length - 1;
+            }
+            targetReturnIndex = index;
+            document.getElementById('modal-card-name').textContent = roundHistory[index].name;
+            document.getElementById('return-modal').classList.remove('hidden');
+        }
+
+        function closeReturnModal() {
+            document.getElementById('return-modal').classList.add('hidden');
+            targetReturnIndex = null;
+        }
+
+        function confirmReturn() {
+            if (targetReturnIndex === null || targetReturnIndex < 0 || targetReturnIndex >= roundHistory.length) {
+                closeReturnModal();
+                return;
+            }
+            const removedCard = roundHistory.splice(targetReturnIndex, 1)[0];
+            deck.push(removedCard.id);
+            shuffleArray(deck);
+            if (roundHistory.length > 0) drawnCard = roundHistory[roundHistory.length - 1];
+            else drawnCard = null;
+            closeReturnModal();
+            render();
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (!document.getElementById('return-modal').classList.contains('hidden')) {
+                if (e.key === 'Escape') closeReturnModal();
+                return;
+            }
+            if ((e.code === 'Space' || e.key === ' ') && document.activeElement.tagName !== 'INPUT') {
+                e.preventDefault(); 
+                handleMainAction();
+            }
+        });
+
+        function render() {
+            // 라운드/덱 정보
+            document.getElementById('round-display').textContent = `Round ${round}`;
+            document.getElementById('deck-count').textContent = `${deck.length}장 남음`;
+
+            // 뷰 전환
+            const backView = document.getElementById('card-back');
+            const shuffleView = document.getElementById('shuffling-view');
+            const frontView = document.getElementById('card-front');
+            const actionBtn = document.getElementById('action-btn');
+            const subNameEl = document.getElementById('card-sub-name');
+            const iconContainer = document.getElementById('card-icon-container');
+            const skillContainer = document.getElementById('card-skill-container');
+            const skillNameEl = document.getElementById('card-skill-name');
+            const skillDescEl = document.getElementById('card-skill-desc');
+
+            if (isShuffling) {
+                backView.classList.add('hidden'); shuffleView.classList.remove('hidden'); frontView.classList.add('hidden');
+                actionBtn.disabled = true; actionBtn.textContent = "셔플 중...";
+            } else if (drawnCard) {
+                backView.classList.add('hidden'); shuffleView.classList.add('hidden'); frontView.classList.remove('hidden');
+                
+                frontView.className = `absolute inset-0 w-full h-full rounded-3xl shadow-[0_0_30px_rgba(0,0,0,0.5)] border-4 border-white/10 flex flex-col items-center justify-center transition-all duration-300 animate-zoom-in cursor-pointer hover:scale-[1.02] ${drawnCard.subColorClass} group-card`;
+                document.getElementById('card-name').className = `text-4xl font-extrabold drop-shadow-md mb-2 ${drawnCard.textColorClass}`;
+                document.getElementById('card-name').textContent = drawnCard.name;
+                
+                // 캐릭터 및 네메시스 이미지 처리
+                let displayImg = null;
+                let assignedChar = null;
+                subNameEl.classList.add('hidden'); // 기본 숨김
+                skillContainer.classList.add('hidden'); // 스킬 기본 숨김
+
+                if (drawnCard.id === 'P1' && assignedP1) {
+                    assignedChar = assignedP1;
+                    subNameEl.textContent = assignedP1.name;
+                    subNameEl.classList.remove('hidden');
+                    displayImg = `char/${assignedP1.name}.png`;
+                } else if (drawnCard.id === 'P2' && assignedP2) {
+                    assignedChar = assignedP2;
+                    subNameEl.textContent = assignedP2.name;
+                    subNameEl.classList.remove('hidden');
+                    displayImg = `char/${assignedP2.name}.png`;
+                } else if (drawnCard.id === 'N' && assignedNemesis) {
+                    subNameEl.textContent = assignedNemesis.name;
+                    subNameEl.classList.remove('hidden');
+                    displayImg = `nemesis/${assignedNemesis.imgFile}.png`;
+                }
+
+                // 플레이어 카드이고 캐릭터가 지정된 경우 스킬 표시
+                if (assignedChar) {
+                    const skillConditionEl = document.getElementById('card-skill-condition');
+                    // 활성화 조건 추출 (예: "당신의 행동 단계 동안 활성화")
+                    const conditionMatch = assignedChar.desc.match(/^(.*?활성화)\s*:/);
+                    const effectMatch = assignedChar.desc.match(/활성화\s*:\s*(.*)$/s);
+
+                    skillConditionEl.textContent = conditionMatch ? `⏱️ ${conditionMatch[1]}` : '⏱️ 활성화';
+                    skillNameEl.textContent = `✨ ${assignedChar.skill}`;
+                    skillDescEl.textContent = effectMatch ? effectMatch[1].trim() : assignedChar.desc;
+                    skillContainer.classList.remove('hidden');
+                }
+
+                // 고정 크기 아이콘 컨테이너 (항상 동일한 크기)
+                const imgSize = "w-24 h-24";
+                if (displayImg) {
+                    iconContainer.className = `flex-shrink-0 ${imgSize} rounded-full bg-black/20 mb-3 backdrop-blur-sm shadow-inner text-white flex items-center justify-center overflow-hidden border-4 border-white/20`;
+                    iconContainer.innerHTML = `
+                        <img src="${displayImg}" class="w-full h-full object-cover"
+                             onerror="this.style.display='none'; this.parentNode.innerHTML='<i data-lucide=\\'${drawnCard.icon}\\' class=\\'w-10 h-10\\'></i>'; this.parentNode.className='flex-shrink-0 ${imgSize} rounded-full bg-black/20 mb-3 backdrop-blur-sm shadow-inner text-white flex items-center justify-center';">
+                    `;
+                } else {
+                    iconContainer.className = `flex-shrink-0 ${imgSize} rounded-full bg-black/20 mb-3 backdrop-blur-sm shadow-inner text-white flex items-center justify-center`;
+                    iconContainer.innerHTML = `<i data-lucide="${drawnCard.icon}" class="w-12 h-12"></i>`;
+                }
+
+                document.getElementById('card-footer-info').textContent = deck.length === 0 ? "덱이 비었습니다" : `남은 카드: ${deck.length}장`;
+
+                actionBtn.disabled = false;
+                if (deck.length === 0) {
+                    actionBtn.className = "w-full max-w-xl py-4 rounded-xl text-xl font-bold shadow-lg transition-all transform active:scale-95 mb-8 bg-purple-600 hover:bg-purple-500 text-white shadow-purple-900/50 flex items-center justify-center gap-2";
+                    actionBtn.innerHTML = `<i data-lucide="shuffle" class="w-6 h-6"></i> 셔플 & 다음 라운드`;
+                } else {
+                    actionBtn.className = "w-full max-w-xl py-4 rounded-xl text-xl font-bold shadow-lg transition-all transform active:scale-95 mb-8 bg-slate-700 hover:bg-slate-600 text-white shadow-slate-900/50 flex items-center justify-center gap-2";
+                    actionBtn.innerHTML = "다음 턴 카드 뽑기";
+                }
+            } else {
+                backView.classList.remove('hidden'); shuffleView.classList.add('hidden'); frontView.classList.add('hidden');
+                actionBtn.disabled = false;
+                actionBtn.className = "w-full max-w-xl py-4 rounded-xl text-xl font-bold shadow-lg transition-all transform active:scale-95 mb-8 bg-slate-700 hover:bg-slate-600 text-white shadow-slate-900/50 flex items-center justify-center gap-2";
+                actionBtn.innerHTML = "다음 턴 카드 뽑기";
+            }
+
+            // 히스토리 렌더링
+            const historyContainer = document.getElementById('history-container');
+            historyContainer.innerHTML = '';
+            if (roundHistory.length === 0) {
+                historyContainer.innerHTML = '<span class="text-slate-600 text-sm py-2 w-full text-center whitespace-nowrap">아직 진행된 턴이 없습니다.</span>';
+            } else {
+                roundHistory.forEach((card, index) => {
+                    const el = document.createElement('div');
+                    el.className = `flex-shrink-0 w-10 h-14 rounded flex items-center justify-center text-xs font-bold shadow-sm border border-white/20 ${card.colorClass} cursor-pointer hover:brightness-125 hover:border-white/50 transition-all`;
+                    el.textContent = card.id;
+                    el.title = "클릭하여 덱으로 되돌리기";
+                    el.onclick = (e) => { e.stopPropagation(); openReturnModal(index); };
+                    historyContainer.appendChild(el);
+                });
+            }
+            const remaining = Math.max(0, 6 - roundHistory.length);
+            for(let i=0; i<remaining; i++) {
+                const el = document.createElement('div');
+                el.className = 'flex-shrink-0 w-10 h-14 rounded bg-slate-700/30 border-2 border-dashed border-slate-700';
+                historyContainer.appendChild(el);
+            }
+
+            lucide.createIcons();
+        }
+
+        renderLeftSidebar();
+        renderRightSidebar();
+        initGame();
+    </script>
+</body>
+</html>
