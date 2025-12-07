@@ -63,27 +63,49 @@
   <body
     class="bg-slate-900 text-slate-100 font-sans select-none h-screen flex overflow-hidden"
   >
-    <!-- 플로팅 헤더 버튼들 (사이드바가 닫혔을 때 보임) -->
+    <!-- 모바일 상단 헤더 (사이드바가 닫혔을 때 보임) -->
     <div
-      id="btn-open-left"
-      class="absolute top-4 left-4 z-20 lg:hidden transition-opacity duration-300"
+      id="mobile-header"
+      class="fixed top-0 left-0 right-0 z-20 lg:hidden flex items-center justify-between px-3 py-2 bg-slate-900/95 backdrop-blur-sm border-b border-slate-700"
     >
       <button
+        id="btn-open-left"
         onclick="openLeftSidebar()"
         class="p-2 bg-slate-800 rounded-lg shadow-lg border border-slate-700 text-slate-300 hover:text-white"
       >
-        <i data-lucide="book-open" class="w-6 h-6"></i>
+        <i data-lucide="book-open" class="w-5 h-5"></i>
       </button>
-    </div>
-    <div
-      id="btn-open-right"
-      class="absolute top-4 right-4 z-20 lg:hidden transition-opacity duration-300"
-    >
+
+      <div class="flex items-center gap-2">
+        <div
+          id="mobile-round-display"
+          class="text-sm font-bold bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-700"
+        >
+          Round 1
+        </div>
+        <button
+          onclick="openMageInfoModal()"
+          class="p-2 bg-slate-800 hover:bg-slate-700 text-amber-400 hover:text-amber-300 rounded-lg border border-slate-700 transition-colors"
+          title="마법사 정보"
+        >
+          <i data-lucide="wand-2" class="w-5 h-5"></i>
+        </button>
+        <button
+          onclick="openNemesisInfoModal()"
+          class="p-2 bg-slate-800 hover:bg-slate-700 text-rose-400 hover:text-rose-300 rounded-lg border border-slate-700 transition-colors"
+          title="네메시스 정보"
+        >
+          <i data-lucide="skull" class="w-5 h-5"></i>
+        </button>
+      </div>
+
       <button
+        id="btn-open-right"
         onclick="openRightSidebar()"
         class="p-2 bg-slate-800 rounded-lg shadow-lg border border-slate-700 text-rose-400 hover:text-rose-200"
+        title="네메시스 선택"
       >
-        <i data-lucide="skull" class="w-6 h-6"></i>
+        <i data-lucide="list" class="w-5 h-5"></i>
       </button>
     </div>
 
@@ -135,11 +157,10 @@
 
     <!-- 2. 메인 게임 영역 -->
     <main
-      class="flex-1 flex flex-col items-center justify-center p-4 relative w-full overflow-y-auto min-w-0 transition-all duration-300"
+      class="flex-1 flex flex-col items-center justify-center p-4 pt-16 lg:pt-4 relative w-full overflow-y-auto min-w-0 transition-all duration-300"
     >
-      <div
-        class="w-full max-w-xl flex justify-between items-center mb-6 px-2 mt-12 lg:mt-0"
-      >
+      <!-- 데스크톱 전용 헤더 -->
+      <div class="hidden lg:flex w-full max-w-xl justify-between items-center mb-6 mt-0">
         <div
           id="round-display"
           class="text-xl font-bold bg-slate-800 px-4 py-2 rounded-lg shadow-lg border border-slate-700"
@@ -153,7 +174,7 @@
             title="마법사 정보"
           >
             <i data-lucide="wand-2" class="w-4 h-4"></i>
-            <span class="hidden sm:inline">마법사</span>
+            <span>마법사</span>
           </button>
           <button
             onclick="openNemesisInfoModal()"
@@ -161,7 +182,7 @@
             title="네메시스 정보"
           >
             <i data-lucide="skull" class="w-4 h-4"></i>
-            <span class="hidden sm:inline">네메시스</span>
+            <span>네메시스</span>
           </button>
           <button
             onclick="resetGame()"
@@ -174,7 +195,7 @@
       </div>
 
       <div
-        class="relative w-full max-w-xl h-[560px] mb-6 group perspective-1000"
+        class="relative w-full max-w-xl h-[300px] mb-6 group perspective-1000"
       >
         <!-- 뒷면 -->
         <div
@@ -231,24 +252,29 @@
               class="text-2xl font-bold text-white/90 hidden"
             ></p>
           </div>
-          <div
-            class="w-full py-3 bg-black/20 backdrop-blur-md rounded-b-2xl flex justify-center items-center gap-2 pointer-events-none"
-          >
-            <span
-              id="card-footer-info"
-              class="text-sm font-medium text-white/50"
-            ></span>
-          </div>
         </div>
       </div>
 
-      <button
-        id="action-btn"
-        onclick="handleMainAction()"
-        class="w-full max-w-xl py-4 rounded-xl text-xl font-bold shadow-lg transition-all transform active:scale-95 mb-8 bg-slate-700 hover:bg-slate-600 text-white shadow-slate-900/50 flex items-center justify-center gap-2"
+      <div
+        id="action-btn-container"
+        class="w-full max-w-xl mb-8"
       >
-        다음 턴 카드 뽑기
-      </button>
+        <div
+          id="remaining-count"
+          class="w-full py-4 rounded-xl text-xl font-bold shadow-lg bg-slate-700 text-white shadow-slate-900/50 flex items-center justify-center gap-3"
+        >
+          <span class="flex items-center gap-2"><i data-lucide="layers" class="w-5 h-5"></i> 6장 남음</span>
+        </div>
+        <button
+          id="shuffle-btn"
+          onclick="startNewRound()"
+          class="hidden w-full py-4 rounded-xl text-xl font-bold shadow-lg transition-all transform active:scale-95 bg-purple-600 hover:bg-purple-500 text-white shadow-purple-900/50 items-center justify-center gap-3"
+        >
+          <span class="text-purple-200">덱이 비었습니다</span>
+          <span class="text-purple-300">|</span>
+          <span class="flex items-center gap-2"><i data-lucide="shuffle" class="w-5 h-5"></i> 셔플하기</span>
+        </button>
+      </div>
 
       <div
         class="w-full max-w-xl bg-slate-800/50 rounded-xl p-4 border border-slate-700 backdrop-blur-sm"
@@ -1110,7 +1136,9 @@
 
       function render() {
         // 라운드/덱 정보
-        document.getElementById("round-display").textContent = `Round ${round}`;
+        const roundText = `Round ${round}`;
+        document.getElementById("round-display").textContent = roundText;
+        document.getElementById("mobile-round-display").textContent = roundText;
         document.getElementById(
           "deck-count"
         ).textContent = `${deck.length}장 남음`;
@@ -1119,7 +1147,8 @@
         const backView = document.getElementById("card-back");
         const shuffleView = document.getElementById("shuffling-view");
         const frontView = document.getElementById("card-front");
-        const actionBtn = document.getElementById("action-btn");
+        const remainingCount = document.getElementById("remaining-count");
+        const shuffleBtn = document.getElementById("shuffle-btn");
         const subNameEl = document.getElementById("card-sub-name");
         const iconContainer = document.getElementById("card-icon-container");
         const playerLabelEl = document.getElementById("card-player-label");
@@ -1128,8 +1157,10 @@
           backView.classList.add("hidden");
           shuffleView.classList.remove("hidden");
           frontView.classList.add("hidden");
-          actionBtn.disabled = true;
-          actionBtn.textContent = "셔플 중...";
+          remainingCount.innerHTML = `<span class="flex items-center gap-2"><i data-lucide="shuffle" class="w-5 h-5 animate-spin"></i> 셔플 중...</span>`;
+          remainingCount.classList.remove("hidden");
+          shuffleBtn.classList.add("hidden");
+          shuffleBtn.classList.remove("flex");
         } else if (drawnCard) {
           backView.classList.add("hidden");
           shuffleView.classList.add("hidden");
@@ -1173,29 +1204,25 @@
             iconContainer.innerHTML = `<i data-lucide="${drawnCard.icon}" class="w-14 h-14"></i>`;
           }
 
-          document.getElementById("card-footer-info").textContent =
-            deck.length === 0
-              ? "덱이 비었습니다"
-              : `남은 카드: ${deck.length}장`;
-
-          actionBtn.disabled = false;
+          // 버튼 영역 업데이트
           if (deck.length === 0) {
-            actionBtn.className =
-              "w-full max-w-xl py-4 rounded-xl text-xl font-bold shadow-lg transition-all transform active:scale-95 mb-8 bg-purple-600 hover:bg-purple-500 text-white shadow-purple-900/50 flex items-center justify-center gap-2";
-            actionBtn.innerHTML = `<i data-lucide="shuffle" class="w-6 h-6"></i> 셔플 & 다음 라운드`;
+            remainingCount.classList.add("hidden");
+            shuffleBtn.classList.remove("hidden");
+            shuffleBtn.classList.add("flex");
           } else {
-            actionBtn.className =
-              "w-full max-w-xl py-4 rounded-xl text-xl font-bold shadow-lg transition-all transform active:scale-95 mb-8 bg-slate-700 hover:bg-slate-600 text-white shadow-slate-900/50 flex items-center justify-center gap-2";
-            actionBtn.innerHTML = "다음 턴 카드 뽑기";
+            remainingCount.innerHTML = `<span class="flex items-center gap-2"><i data-lucide="layers" class="w-5 h-5"></i> ${deck.length}장 남음</span>`;
+            remainingCount.classList.remove("hidden");
+            shuffleBtn.classList.add("hidden");
+            shuffleBtn.classList.remove("flex");
           }
         } else {
           backView.classList.remove("hidden");
           shuffleView.classList.add("hidden");
           frontView.classList.add("hidden");
-          actionBtn.disabled = false;
-          actionBtn.className =
-            "w-full max-w-xl py-4 rounded-xl text-xl font-bold shadow-lg transition-all transform active:scale-95 mb-8 bg-slate-700 hover:bg-slate-600 text-white shadow-slate-900/50 flex items-center justify-center gap-2";
-          actionBtn.innerHTML = "다음 턴 카드 뽑기";
+          remainingCount.innerHTML = `<span class="flex items-center gap-2"><i data-lucide="layers" class="w-5 h-5"></i> ${deck.length}장 남음</span>`;
+          remainingCount.classList.remove("hidden");
+          shuffleBtn.classList.add("hidden");
+          shuffleBtn.classList.remove("flex");
         }
 
         // 히스토리 렌더링

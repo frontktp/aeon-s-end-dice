@@ -3,7 +3,9 @@
     "allow": [
       "Bash(dir:*)",
       "Bash(git init:*)",
-      "Bash(git remote add:*)"
+      "Bash(git remote add:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nUI 개선: 모바일 헤더 및 덱 상태 표시 리팩토링\n\n- 모바일 상단 고정 헤더 추가 (라운드, 마법사/네메시스 정보 버튼)\n- 데스크톱/모바일 헤더 분리\n- 덱 상태 표시 통일 (남은 카드 수, 셔플 버튼 스타일 일관성)\n- 카드 내부 footer 제거로 UI 간소화\n- 네메시스 선택 버튼 아이콘 변경 (list)으로 구분 개선\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n)\")"
     ],
     "deny": [],
     "ask": []
