@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <linearGradient id="cardGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#6366f1"/>
+      <stop offset="100%" style="stop-color:#8b5cf6"/>
+    </linearGradient>
+  </defs>
+  <!-- Card background -->
+  <rect x="15" y="10" width="70" height="80" rx="8" fill="url(#cardGrad)" stroke="#fff" stroke-width="3"/>
+  <!-- Turn order symbol -->
+  <circle cx="50" cy="45" r="18" fill="none" stroke="#fbbf24" stroke-width="4"/>
+  <path d="M50 27 L50 35 M50 55 L50 63 M32 45 L40 45 M60 45 L68 45" stroke="#fbbf24" stroke-width="3" stroke-linecap="round"/>
+  <!-- Number indicators -->
+  <circle cx="30" cy="75" r="8" fill="#3b82f6"/>
+  <circle cx="50" cy="75" r="8" fill="#10b981"/>
+  <circle cx="70" cy="75" r="8" fill="#f43f5e"/>
+  <text x="30" y="79" text-anchor="middle" fill="white" font-size="10" font-weight="bold">1</text>
+  <text x="50" y="79" text-anchor="middle" fill="white" font-size="10" font-weight="bold">2</text>
+  <text x="70" y="79" text-anchor="middle" fill="white" font-size="10" font-weight="bold">N</text>
+</svg>
